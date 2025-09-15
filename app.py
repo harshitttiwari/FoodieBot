@@ -1,6 +1,5 @@
 # app.py
 import streamlit as st
-from dotenv import load_dotenv
 import os
 from database import initialize_services
 from bot_logic import initialize_llm
@@ -15,7 +14,12 @@ st.markdown("""<style>.main .block-container {padding-top: 1rem;}</style>""", un
 
 if "app_ready" not in st.session_state:
     st.info("Initializing services...")
-    load_dotenv()
+    # Load .env locally if python-dotenv is available; on Streamlit Cloud we rely on Secrets/env vars
+    try:
+        from dotenv import load_dotenv  # type: ignore
+        load_dotenv()
+    except Exception:
+        st.info("Using environment/Secrets without .env loading (python-dotenv not found).")
     df, collection, embedder = initialize_services()
     llm = initialize_llm()
 
