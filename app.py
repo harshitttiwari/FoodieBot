@@ -5,6 +5,13 @@ from bot_logic import initialize_llm
 from ui_components import render_chat_interface, render_analytics_sidebar, render_admin_panel
 
 # --- Page Config ---
+"""Ensure Streamlit writes under a writable HOME in containerized envs (HF/ Docker)."""
+os.environ.setdefault("HOME", "/tmp")
+try:
+    os.makedirs(os.path.join(os.environ["HOME"], ".streamlit"), exist_ok=True)
+except Exception:
+    pass
+
 st.set_page_config(
     page_title="FoodieBot Live Demo",
     page_icon="🤖",
@@ -12,6 +19,7 @@ st.set_page_config(
 )
 
 # --- Styling ---
+st.set_option("browser.gatherUsageStats", False)
 st.markdown(
     """
     <style>

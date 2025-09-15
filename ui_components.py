@@ -164,7 +164,7 @@ def render_analytics_sidebar(container):
 
 def render_admin_panel():
     st.header("⚙️ Admin Panel")
-    df = st.data_editor(st.session_state.df, num_rows="dynamic", use_container_width=True)
+    df = st.data_editor(st.session_state.df, num_rows="dynamic", width='stretch')
     if st.button("Save to CSV"):
         try:
             df.to_csv(DATA_FILE_PATH, index=False)
