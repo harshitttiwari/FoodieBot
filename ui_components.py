@@ -1,8 +1,6 @@
-# ui_components.py
 import streamlit as st
 import time
 from datetime import datetime
-
 from bot_logic import get_ai_response, calculate_interest_score
 
 DATA_FILE_PATH = "fast_food_products.csv"
@@ -23,13 +21,14 @@ def _build_enhanced_context(user_query, search_results):
         allergen_msg = f" (avoiding {', '.join(allergen_restrictions)})" if allergen_restrictions else ""
         return f"No suitable menu items found{allergen_msg}."
 
+    # Limit items per category to keep responses concise and avoid repetition
+    MAX_PER_CATEGORY = 3
     context = "Here are the relevant menu items:\n\n"
     for category, items in categorized_items.items():
         if not items:
             continue
         context += f"**{category.upper()}:**\n"
-        for item in items:
-            # Format values safely
+        for item in items[:MAX_PER_CATEGORY]:
             price = _format_price(item.get("price"))
             allergens = item.get("allergens", "None listed") or "None listed"
             allergens_display = "No allergens listed" if allergens == "None listed" else f"Contains: {allergens}"
@@ -42,6 +41,8 @@ def _build_enhanced_context(user_query, search_results):
             if item.get("calories") and item.get("calories") != "N/A":
                 context += f"  Calories: {item['calories']}\n"
             context += "\n"
+    # Brief prompt hint to encourage concise answers
+    context += "Please answer concisely in 5-7 bullet points."
     return context
 
 def _format_price(value):
@@ -51,7 +52,6 @@ def _format_price(value):
         return "Price N/A"
 
 def _detect_allergen_restrictions(user_query):
-    """Detect allergen restrictions in user query."""
     query = user_query.lower()
     allergen_keywords = {
         "soy": ["no soy", "soy free", "soy allergy"],
@@ -65,7 +65,6 @@ def _detect_allergen_restrictions(user_query):
     return [a for a, kws in allergen_keywords.items() if any(k in query for k in kws)]
 
 def _analyze_request_type(user_query):
-    """Detect if user wants snack, meal, dessert, or drink."""
     query = user_query.lower()
     keywords = {
         "main_dish": ["meal", "dish", "dinner", "lunch"],
@@ -76,7 +75,6 @@ def _analyze_request_type(user_query):
     return [t for t, kws in keywords.items() if any(k in query for k in kws)]
 
 def _filter_items_by_restrictions(items, restrictions):
-    """Remove menu items containing restricted allergens."""
     if not restrictions:
         return items
     safe_items = []
@@ -87,7 +85,6 @@ def _filter_items_by_restrictions(items, restrictions):
     return safe_items
 
 def _categorize_items(items, request_types):
-    """Group menu items by category."""
     categories = {"main_dishes": [], "appetizers_snacks": [], "beverages": [], "desserts": []}
     for item in items:
         cat = (item.get("category") or "").lower()
@@ -107,19 +104,21 @@ def _categorize_items(items, request_types):
 
 # ----------------- UI Rendering -----------------
 def render_chat_interface(container):
-    """Main chatbot interface with history + RAG pipeline."""
+    """Chatbot interface with fixed rectangle and scrollable history."""
     with container:
         st.header("Conversational Agent")
-        chat_container = st.container(height=450, border=True)
+        # Removed the empty HTML chatbox that caused a big white rectangle.
+        # We rely on Streamlit's native chat_message bubbles. If you later
+        # want a fixed-height scroll area (~350px), we can add a small CSS
+        # override that limits the chat history block height.
 
-        if "chat_history" not in st.session_state or not st.session_state.chat_history:
-            st.session_state.chat_history = [
-                {"role": "assistant", "content": "Welcome to FoodieBot! How can I help you with our menu today?"}
-            ]
+        # Display chat history
+        chat_container = st.container()
         for msg in st.session_state.chat_history:
             with chat_container.chat_message(msg["role"]):
                 st.markdown(msg["content"])
 
+        # User input
         if prompt := st.chat_input("Ask me about the menu..."):
             st.session_state.chat_history.append({"role": "user", "content": prompt})
             with chat_container.chat_message("user"): st.markdown(prompt)
@@ -148,7 +147,6 @@ def render_chat_interface(container):
             })
 
 def render_analytics_sidebar(container):
-    """Sidebar with query logs + interest score chart."""
     with container:
         st.header("📈 Live Analytics")
         if not st.session_state.query_log:
@@ -165,7 +163,6 @@ def render_analytics_sidebar(container):
         st.line_chart(st.session_state.interest_history)
 
 def render_admin_panel():
-    """Admin panel to view & edit CSV."""
     st.header("⚙️ Admin Panel")
     df = st.data_editor(st.session_state.df, num_rows="dynamic", use_container_width=True)
     if st.button("Save to CSV"):
