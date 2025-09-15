@@ -1,5 +1,14 @@
-import streamlit as st
 import os
+# Ensure Streamlit writes under a writable HOME before importing streamlit
+os.environ.setdefault("HOME", "/tmp")
+try:
+    os.makedirs(os.path.join(os.environ["HOME"], ".streamlit"), exist_ok=True)
+except Exception:
+    pass
+# Disable usage stats via env var (supported by Streamlit) rather than set_option
+os.environ.setdefault("STREAMLIT_BROWSER_GATHER_USAGE_STATS", "false")
+
+import streamlit as st
 from database import initialize_services
 from bot_logic import initialize_llm
 from ui_components import render_chat_interface, render_analytics_sidebar, render_admin_panel
@@ -19,7 +28,6 @@ st.set_page_config(
 )
 
 # --- Styling ---
-st.set_option("browser.gatherUsageStats", False)
 st.markdown(
     """
     <style>
