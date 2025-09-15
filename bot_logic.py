@@ -6,9 +6,19 @@ from langchain_groq import ChatGroq
 @st.cache_resource
 def initialize_llm():
     """Initializes the Groq Large Language Model with API key."""
+    # Prefer environment variable; fall back to Streamlit Secrets when running on Streamlit Cloud
     api_key = os.getenv("GROQ_API_KEY")
     if not api_key:
-        st.error("❌ GROQ_API_KEY not set. Please add it to your .env file.")
+        try:
+            # st.secrets is only available in Streamlit runtime; .get for graceful access
+            api_key = st.secrets.get("GROQ_API_KEY")  # type: ignore[attr-defined]
+        except Exception:
+            api_key = None
+
+    if not api_key:
+        st.error(
+            "❌ GROQ_API_KEY not found. Set it in a local .env file or in Streamlit Cloud Secrets (GROQ_API_KEY)."
+        )
         return None
     try:
         llm = ChatGroq(
