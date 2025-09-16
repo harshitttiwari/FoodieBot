@@ -1,121 +1,122 @@
 # 🤖 FoodieBot - AI Restaurant Assistant
 
-A Streamlit-based conversational assistant that helps customers explore your menu, powered by Groq’s LLM with a RAG pipeline on ChromaDB. It supports allergen safety, clean formatting, live analytics, and an admin panel to edit the menu.
+An intelligent restaurant chatbot powered by RAG (Retrieval-Augmented Generation) that helps customers explore menu items with real-time search and personalized recommendations.
 
-## ✨ What’s in this version
+## ✨ Features
 
-- ✅ Immediate reply rendering: the assistant response is shown instantly after each question (no “shows on next message” delay)
-- ✅ Bullet-point menus with consistent price formatting ($X.XX)
-- ✅ Allergen-aware context: filters items based on user’s restrictions
-- ✅ Clear categorization: main dishes, snacks, beverages, desserts
-- ✅ Live analytics: latest query, timing, similarity score, and interest score trend
-- ✅ Admin panel: edit and save the CSV directly from the UI
+- **Smart Menu Search**: Natural language queries to find food items
+- **RAG Pipeline**: ChromaDB + SentenceTransformers for accurate retrieval
+- **LLM Integration**: Groq API with Llama-3.1-8b-instant for conversational responses
+- **Live Analytics**: Real-time query tracking and interest scoring
+- **Admin Panel**: Edit menu data directly in the interface
+- **Fixed Chat UI**: 350px scrollable chat history for optimal UX
 
-## 🚀 Quick Start
+## 🚀 Quick Deploy
 
-### Prerequisites
-- Python 3.8+
-- A Groq API key
+### Hugging Face Spaces (Recommended)
+1. Go to [huggingface.co/spaces](https://huggingface.co/spaces) → New Space
+2. Name: `foodiebot`, SDK: `Streamlit`, Python: `3.10`
+3. Add files from this repo (or import from GitHub: `harshitttiwari/FoodieBot`)
+4. Set Environment Variable: `GROQ_API_KEY` = `your_groq_api_key`
+5. Deploy automatically
 
-### Install dependencies
-```powershell
-pip install streamlit langchain-groq pandas chromadb sentence-transformers python-dotenv
+### Docker Deployment
+```dockerfile
+FROM python:3.10-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+ENV HF_HOME=/tmp/hf_cache
+ENV TRANSFORMERS_CACHE=/tmp/hf_cache
+COPY . .
+EXPOSE 7860
+CMD ["sh", "-c", "streamlit run app.py --server.port=$PORT --server.address=0.0.0.0"]
 ```
 
-### Configure the API key
-Create a `.env` file in the project root:
-```env
-GROQ_API_KEY=your-groq-api-key-here
-```
-
-### Run the app
-```powershell
+### Local Setup
+```bash
+git clone https://github.com/harshitttiwari/FoodieBot.git
+cd FoodieBot
+pip install -r requirements.txt
+echo 'GROQ_API_KEY="your_key_here"' > .env
 streamlit run app.py
 ```
 
-Open your browser to http://localhost:8501
-
-## 📁 Project Structure (current)
+## 📁 Project Structure
 
 ```
 FoodieBot/
-├── app.py                  # App entry; sets up services, layout, pages
-├── bot_logic.py            # LLM prompt, safety filters, response cleaning
-├── ui_components.py        # Chat interface, analytics sidebar, admin panel
-├── database.py             # CSV load, ChromaDB collection, embeddings
-├── fast_food_products.csv  # Menu data
-├── advanced_test_suite.py  # Comprehensive quality tests (optional)
-└── README.md               # This file
+├── app.py                 # Main Streamlit application
+├── bot_logic.py          # LLM integration and response logic
+├── database.py           # ChromaDB setup and embeddings
+├── ui_components.py      # Chat interface and analytics
+├── fast_food_products.csv # Menu data
+├── requirements.txt      # Dependencies
+└── .env                  # API keys (local only)
 ```
 
-## 🧠 Architecture & Flow
+## 🔧 Configuration
 
-### 1) Data & Search (database.py)
-- `initialize_services()`
-   - Loads `fast_food_products.csv`
-   - Normalizes columns and ensures numeric prices
-   - Builds a ChromaDB collection with embeddings using `SentenceTransformer('all-MiniLM-L6-v2')`
-   - Documents include name, description, ingredients, calories, allergens, dietary tags
+### Environment Variables
+- `GROQ_API_KEY`: Your Groq API key for LLM access
+- `HF_HOME`: Hugging Face cache directory (auto-set to `/tmp/hf_cache`)
+- `TRANSFORMERS_CACHE`: Transformers cache (auto-set to `/tmp/hf_cache`)
 
-### 2) LLM (bot_logic.py)
-- `initialize_llm()` uses `GROQ_API_KEY` and `ChatGroq(model='llama-3.1-8b-instant', temperature=0.2)`
-- `get_ai_response(llm, user_input, chat_history, context)`
-   - Builds a concise prompt with requirements:
-      - Use bullets (•), include prices as $X.XX
-      - Stay on menu; avoid internal monologue
-      - Respect allergen restrictions mentioned by the user
-   - Cleans responses via `_clean_response()` (removes phrases like “Based on your request”)
-   - Suggests cooling drinks if the user orders spicy items
+### Dependencies
+- streamlit==1.36.0
+- python-dotenv==1.0.1
+- langchain-groq==0.1.3
+- pandas==2.2.2
+- chromadb==0.5.3
+- sentence-transformers==2.2.2
+- torch==2.1.2
 
-### 3) Context Building (ui_components.py)
-- `_build_enhanced_context(query, search_results)`
-   - Detects allergen restrictions and request type
-   - Filters items that include restricted allergens
-   - Categorizes into: main_dishes, appetizers_snacks, beverages, desserts
-   - Formats output:
-      - Bullet “• {name} ({$price})”
-      - Ingredients (semicolon → comma)
-      - Allergens (e.g., “Contains: dairy; gluten” or “No allergens listed”)
-      - Category and Calories
+## 🎯 Usage
 
-### 4) Chat UI (ui_components.py)
-- `render_chat_interface()`
-   - Renders existing history
-   - On new input:
-      - Appends the user message to history
-      - Queries vector DB and builds context
-      - Calls `get_ai_response(...)`
-      - Renders the assistant reply immediately with `st.markdown(response)` inside the assistant `chat_message` block
-      - Updates history, analytics, and logs
+1. **Ask Questions**: "Show me spicy burgers under $12"
+2. **Get Recommendations**: "What's good for someone with dairy allergies?"
+3. **View Analytics**: Check query performance and interest scores
+4. **Admin Access**: Edit menu items in the sidebar panel
 
-### 5) Analytics & Admin
-- `render_analytics_sidebar()` shows latest query, match score, time, and interest score chart
-- `render_admin_panel()` lets you edit the DataFrame and save back to `fast_food_products.csv`
+## 🔒 Security Notes
 
-## 🛡️ Safety & Formatting
-- Inappropriate/off-topic filtering (`_is_inappropriate_or_irrelevant`)
-- Prices formatted as `$X.XX` via `_format_price`
-- Ingredients rendered human-friendly (semicolon → comma)
-- Strict “menu-only” responses; if info is unknown, the bot says so
+- Never commit `.env` files (already gitignored)
+- Use environment variables or platform secrets for API keys
+- Rotate exposed API keys immediately
 
-## 🧪 Testing (optional)
-We include an advanced test harness to evaluate formatting and behaviors.
+## 🐛 Troubleshooting
 
-Run:
-```powershell
-python advanced_test_suite.py
+**Permission denied: '/app/model_cache'**
+- Fixed: App sets `HF_HOME=/tmp/hf_cache` for writable cache
+
+**ModuleNotFoundError: dotenv**
+- Fixed: dotenv import is optional; uses platform secrets as fallback
+
+**Chat area too large**
+- Fixed: Chat history constrained to 350px scrollable container
+
+## 📊 Architecture
+
+```
+User Query → ChromaDB Search → Context Building → Groq LLM → Formatted Response
+     ↓              ↓                ↓              ↓            ↓
+Analytics ← Query Logging ← Interest Scoring ← Response ← Clean Formatting
 ```
 
-It checks: formatting, price display consistency, context quality, allergen safety, conversational flow, stress tests, and more.
+## 🤝 Contributing
 
-## � Troubleshooting
-- “No response until next message”: This has been addressed. The assistant reply is rendered immediately inside the assistant `chat_message` block. If you customize the UI, keep the `st.markdown(response)` inside that block.
-- “LLM not available”: Ensure `.env` is present and `GROQ_API_KEY` is valid.
-- “Embedding model error”: First run may take longer to download `all-MiniLM-L6-v2`.
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature-name`
+3. Commit changes: `git commit -m "Add feature"`
+4. Push to branch: `git push origin feature-name`
+5. Submit a Pull Request
 
-## 📣 Contributing
-PRs are welcome. Please open an issue to discuss larger changes.
+## 📄 License
 
----
+MIT License - see [LICENSE](LICENSE) file for details.
 
-Made with ❤️ to help restaurants deliver delightful, safe menu guidance.
+## 🔗 Links
+
+- [Live Demo](https://huggingface.co/spaces/harshitttiwari/foodiebot)
+- [GitHub Repository](https://github.com/harshitttiwari/FoodieBot)
+- [Groq API](https://groq.com/)
